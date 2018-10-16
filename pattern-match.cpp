@@ -74,8 +74,13 @@ int main()
     double starttime, stoptime;
     
     // Set patterns
-    patternList.push_back("*olar*");
-    patternList.push_back("*c*rto*");
+    patternList.push_back("*iaculis*");
+    patternList.push_back("*vulputate*");
+    patternList.push_back("*efficitur*");
+    patternList.push_back("*massa*");
+    patternList.push_back("*eleifend*");
+    patternList.push_back("*tristique*");
+    patternList.push_back("*tempor*");
 
     // Clear output
     remove("output.txt");
@@ -83,8 +88,6 @@ int main()
 
     // starttime
     starttime = omp_get_wtime();
-
-    // omp_set_num_threads(4);
 
     if (file.is_open())
     {
@@ -106,6 +109,7 @@ int main()
                         strcpy(pattern, patternList.at(j).c_str());
                         if (strmatch((char*)line.c_str(), pattern, line.length(), strlen(pattern))){
                             th_id = omp_get_thread_num();
+                            #pragma omp critical
                             output << "Match '" << pattern << "' in line " << i << " Thd: " << th_id << " of " << nthreads << endl;
                         }
                     }
@@ -118,7 +122,8 @@ int main()
             << std::fixed << std::setw(11)
             << std::setprecision( 6 )
             << stoptime-starttime
-            << " segundos." << endl;
+            << " segundos."
+            << " com " << threads_n << " threads " << endl;
     }
     else {
         cout << "Unable to open file" << endl;
