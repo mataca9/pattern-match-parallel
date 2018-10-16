@@ -89,6 +89,10 @@ int main()
     // starttime
     starttime = omp_get_wtime();
 
+    // hardcoded thread number
+    int threads_n = 8;
+    omp_set_num_threads(threads_n);
+
     if (file.is_open())
     {
         // Populates lineList from file
