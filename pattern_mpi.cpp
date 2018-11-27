@@ -1,6 +1,6 @@
 // C++ program to implement wildcard
 // pattern matching algorithm
-#include "stdc++.h"
+#include <bits/stdc++.h>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -10,18 +10,12 @@ using namespace std;
 
 #define LINECOUNT 200
 #define LINESIZE 200
+#define PATTERNCOUNT 10
+#define PATTERNSIZE 20
 
 char lineList[LINECOUNT][LINESIZE];
 char result[LINECOUNT][LINESIZE];
-char patternList[7][15] = {
-    "*iaculis*",
-    "*vulputate*",
-    "*efficitur*",
-    "*massa*",
-    "*eleifend*",
-    "*tristique*",
-    "*tempor*"
-};
+char patternList[PATTERNCOUNT][PATTERNSIZE];
 
 // Function that matches input str with
 // given wildcard pattern
@@ -96,31 +90,37 @@ int main(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     // Program vars
-    int i, j;
+    int i, j, chunkSize, fileLength, patternLength;
     string line;
-    int countLines, countPatterns;   
-    char *pattern;
     std::ofstream output;
-    ifstream file("file.txt");
-    int chunkSize;
-
-    countPatterns = sizeof(patternList) / sizeof(patternList[0]);
+    ifstream patterns("pattern.txt");
 
     // Set chunkSize
     chunkSize = (LINECOUNT / size);
 
+    // Populates patternList from patterns.txt
+    i = 0;
+    while (getline(patterns, line))
+    {
+        strcpy(patternList[i], line.c_str());
+        i++;
+    }
+    patternLength = i;
+    patterns.close();
+
     if (rank == 0) {
+        ifstream file("file.txt");
 
         if (file.is_open())
         {
-            // Populates lineList from file
+            // Populates lineList from file.txt
             i = 0;
             while (getline(file, line))
             {
                 strcpy(lineList[i], line.c_str());
                 i++;
             }
-            countLines = i;
+            fileLength = i;
             file.close();
 
             // Send chucks
@@ -130,15 +130,12 @@ int main(int argc, char** argv)
             }
 
             // Process local chunk
-            for(i = 0; i < countPatterns; i++){
+            for(i = 0; i < patternLength; i++){
                 for(j = 0; j < chunkSize; j++){
-                    pattern = new char[strlen(patternList[i]) + 1];
-                    strcpy(pattern, patternList[i]);
-                    if (strmatch(lineList[j], pattern, strlen(lineList[j]), strlen(pattern))) {
-
+                    if (strmatch(lineList[j], patternList[i], strlen(lineList[j]), strlen(patternList[i]))) {
                         // Concatenate other results for same line
                         stringstream result_stream;
-                        result_stream << result[j] << "\nFound " << pattern;
+                        result_stream << result[j] << "\nFound " << patternList[i];
                         string result_string = result_stream.str();
                         strcpy(result[j], result_string.c_str());
                     }
@@ -160,15 +157,12 @@ int main(int argc, char** argv)
         MPI_Recv (&lineList, chunkSize*LINESIZE, MPI_CHAR, 0, tag, MPI_COMM_WORLD, &status);
 
         // Process the received chunk
-        for(i = 0; i < countPatterns; i++){
+        for(i = 0; i < patternLength; i++){
             for(j = 0; j < chunkSize; j++){
-                pattern = new char[strlen(patternList[i]) + 1];
-                strcpy(pattern, patternList[i]);
-                if (strmatch(lineList[j], pattern, strlen(lineList[j]), strlen(pattern))) {
-
+                if (strmatch(lineList[j], patternList[i], strlen(lineList[j]), strlen(patternList[i]))) {
                     // Concatenate other results for same line
                     stringstream result_stream;
-                    result_stream << result[j] << "\nFound " << pattern;
+                    result_stream << result[j] << "\nFound " << patternList[i];
                     string result_string = result_stream.str();
                     strcpy(result[j], result_string.c_str());
                 }
@@ -176,7 +170,7 @@ int main(int argc, char** argv)
         }
 
         // Send processed chunk
-		MPI_Send(result, chunkSize*LINESIZE, MPI_CHAR, 0, tag, MPI_COMM_WORLD);
+        MPI_Send(result, chunkSize*LINESIZE, MPI_CHAR, 0, tag, MPI_COMM_WORLD);
     }
 
     if (rank == 0) {
@@ -188,7 +182,7 @@ int main(int argc, char** argv)
         // Throw result on output file
         for (i = 0; i < LINECOUNT; i++) {
             if (strlen(result[i]) > 0){
-                output << "Line " << i << " : " << result[i] << "\n" << endl;
+                output << "Line " << i << ": " << result[i] << "\n" << endl;
             }
         }
     }    
